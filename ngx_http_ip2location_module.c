@@ -5,6 +5,7 @@
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
+#include <stdio.h>
 
 #include "../ip2location-c-7.0.0/libIP2Location/IP2Location.h"
 
@@ -114,7 +115,10 @@ ngx_http_ip2location_latitude(ngx_http_request_t *r, ngx_http_variable_value_t *
 	
 	IP2LocationRecord *record = IP2Location_get_latitude((IP2Location *)data, (char *)r->connection->addr_text.data);
 	
-	vv->data = (u_char *)record->latitude;
+	char latitude_record[20];
+	sprintf(latitude_record, "%.9f", record->latitude);
+
+	vv->data = (u_char *)latitude_record;
 	
 	if (vv->data == NULL) {
 		vv->valid = 0;
@@ -138,7 +142,10 @@ ngx_http_ip2location_longitude(ngx_http_request_t *r, ngx_http_variable_value_t 
 	
 	IP2LocationRecord *record = IP2Location_get_longitude((IP2Location *)data, (char *)r->connection->addr_text.data);
 	
-	vv->data = (u_char *)record->longitude;
+	char longitude_record[20];
+	sprintf(longitude_record, "%.9f", record->longitude);
+
+	vv->data = (u_char *)longitude_record;
 	
 	if (vv->data == NULL) {
 		vv->valid = 0;
@@ -222,7 +229,7 @@ ngx_http_ip2location_database(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 	ngx_str_t ngx_longitude_var_name = ngx_string("ip2location_longitude");
 
 	ngx_http_variable_t *city_var;
-	ngx_str_t ngx_city_name = ngx_string("ip2location_city");
+	ngx_str_t ngx_city_var_name = ngx_string("ip2location_city");
 
 	ngx_http_variable_t *region_var;
 	ngx_str_t ngx_region_var_name = ngx_string("ip2location_region");
@@ -248,7 +255,7 @@ ngx_http_ip2location_database(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 		return NGX_CONF_ERROR;
 	}
 
-	latitude_var = ngx_http_add_variable(cf, &ngx_latitude_name, NGX_HTTP_VAR_CHANGEABLE );
+	latitude_var = ngx_http_add_variable(cf, &ngx_latitude_var_name, NGX_HTTP_VAR_CHANGEABLE );
 	if (latitude_var == NULL) {
 		return NGX_CONF_ERROR;
 	}
