@@ -13,12 +13,7 @@
 static char *ngx_http_ip2location_database(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 /* Variable handlers */
-static ngx_int_t ngx_http_ip2location_country_code(ngx_http_request_t *r,  ngx_http_variable_value_t *v, uintptr_t data);
-static ngx_int_t ngx_http_ip2location_country_name(ngx_http_request_t *r,  ngx_http_variable_value_t *v, uintptr_t data);
-static ngx_int_t ngx_http_ip2location_latitude(ngx_http_request_t *r,  ngx_http_variable_value_t *v, uintptr_t data);
-static ngx_int_t ngx_http_ip2location_longitude(ngx_http_request_t *r,  ngx_http_variable_value_t *v, uintptr_t data);
-static ngx_int_t ngx_http_ip2location_city(ngx_http_request_t *r,  ngx_http_variable_value_t *v, uintptr_t data);
-static ngx_int_t ngx_http_ip2location_region(ngx_http_request_t *r,  ngx_http_variable_value_t *v, uintptr_t data);
+static ngx_int_t ngx_http_ip2location_json(ngx_http_request_t *r,  ngx_http_variable_value_t *v, uintptr_t data);
 
 /* Directives */
 static ngx_command_t  ngx_http_ip2location_commands[] = {
@@ -62,13 +57,23 @@ ngx_module_t  ngx_http_ip2location_module = {
 
 
 static ngx_int_t
-ngx_http_ip2location_country_code(ngx_http_request_t *r, ngx_http_variable_value_t *v, uintptr_t data){
+ngx_http_ip2location_json(ngx_http_request_t *r, ngx_http_variable_value_t *v, uintptr_t data){
 	ngx_http_variable_value_t *vv = v;
-	
-	IP2LocationRecord *record = IP2Location_get_country_short((IP2Location *)data, (char *)r->connection->addr_text.data);
-	
-	vv->data = (u_char *)record->country_short;
-	
+
+	const char *format = "{\"country_long\":\"%s\",\"country_short\":\"%s\",\"city\":\"%s\",\"region\":\"%s\",\"lat\":%.5f,\"long\":%.5f}";
+
+	IP2LocationRecord *record = IP2Location_get_all((IP2Location *)data, (char *)r->connection->addr_text.data);
+
+	int len = snprintf(NULL, 0, format, record->country_long, record->country_short, record->city, record->region, record->latitude, record->longitude);
+
+	char *str;
+	if (!(str = malloc((len + 1) * sizeof(char))))
+		return NGX_ERROR;
+
+	snprintf(str, len + 1, format, record->country_long, record->country_short, record->city, record->region, record->latitude, record->longitude);
+
+	vv->data = (u_char *)str;
+
 	if (vv->data == NULL) {
 		vv->valid = 0;
 		vv->not_found = 1;
@@ -78,135 +83,6 @@ ngx_http_ip2location_country_code(ngx_http_request_t *r, ngx_http_variable_value
 		vv->no_cacheable = 0;
 		vv->not_found = 0;
 	}
-
-	ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-				   "http ip2location_country_code: %V %v", &r->connection->addr_text, v);
-
-	return NGX_OK;
-}
-
-static ngx_int_t
-ngx_http_ip2location_country_name(ngx_http_request_t *r, ngx_http_variable_value_t *v, uintptr_t data){
-	ngx_http_variable_value_t *vv = v;
-	
-	IP2LocationRecord *record = IP2Location_get_country_long((IP2Location *)data, (char *)r->connection->addr_text.data);
-	
-	vv->data = (u_char *)record->country_long;
-	
-	if (vv->data == NULL) {
-		vv->valid = 0;
-		vv->not_found = 1;
-	} else {
-		vv->len = ngx_strlen( vv->data );
-		vv->valid = 1;
-		vv->no_cacheable = 0;
-		vv->not_found = 0;
-	}
-
-	ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-				   "http ip2location_country_name: %V %v", &r->connection->addr_text, v);
-
-	return NGX_OK;
-}
-
-static ngx_int_t
-ngx_http_ip2location_latitude(ngx_http_request_t *r, ngx_http_variable_value_t *v, uintptr_t data){
-	ngx_http_variable_value_t *vv = v;
-	
-	IP2LocationRecord *record = IP2Location_get_latitude((IP2Location *)data, (char *)r->connection->addr_text.data);
-	
-	char latitude_record[30];
-	snprintf(latitude_record, 30, "%.9f", record->latitude);
-
-	vv->data = (u_char *)latitude_record;
-	
-	if (vv->data == NULL) {
-		vv->valid = 0;
-		vv->not_found = 1;
-	} else {
-		vv->len = ngx_strlen( vv->data );
-		vv->valid = 1;
-		vv->no_cacheable = 0;
-		vv->not_found = 0;
-	}
-
-	ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-				   "http ip2location_latitude: %V %v", &r->connection->addr_text, v);
-
-	return NGX_OK;
-}
-
-static ngx_int_t
-ngx_http_ip2location_longitude(ngx_http_request_t *r, ngx_http_variable_value_t *v, uintptr_t data){
-	ngx_http_variable_value_t *vv = v;
-	
-	IP2LocationRecord *record = IP2Location_get_longitude((IP2Location *)data, (char *)r->connection->addr_text.data);
-	
-	char longitude_record[30];
-	snprintf(longitude_record, 30, "%.9f", record->longitude);
-
-	vv->data = (u_char *)longitude_record;
-	
-	if (vv->data == NULL) {
-		vv->valid = 0;
-		vv->not_found = 1;
-	} else {
-		vv->len = ngx_strlen( vv->data );
-		vv->valid = 1;
-		vv->no_cacheable = 0;
-		vv->not_found = 0;
-	}
-
-	ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-				   "http ip2location_longitude: %V %v", &r->connection->addr_text, v);
-
-	return NGX_OK;
-}
-
-static ngx_int_t
-ngx_http_ip2location_city(ngx_http_request_t *r, ngx_http_variable_value_t *v, uintptr_t data){
-	ngx_http_variable_value_t *vv = v;
-	
-	IP2LocationRecord *record = IP2Location_get_city((IP2Location *)data, (char *)r->connection->addr_text.data);
-	
-	vv->data = (u_char *)record->city;
-	
-	if (vv->data == NULL) {
-		vv->valid = 0;
-		vv->not_found = 1;
-	} else {
-		vv->len = ngx_strlen( vv->data );
-		vv->valid = 1;
-		vv->no_cacheable = 0;
-		vv->not_found = 0;
-	}
-
-	ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-				   "http ip2location_city: %V %v", &r->connection->addr_text, v);
-
-	return NGX_OK;
-}
-
-static ngx_int_t
-ngx_http_ip2location_region(ngx_http_request_t *r, ngx_http_variable_value_t *v, uintptr_t data){
-	ngx_http_variable_value_t *vv = v;
-	
-	IP2LocationRecord *record = IP2Location_get_region((IP2Location *)data, (char *)r->connection->addr_text.data);
-	
-	vv->data = (u_char *)record->region;
-	
-	if (vv->data == NULL) {
-		vv->valid = 0;
-		vv->not_found = 1;
-	} else {
-		vv->len = ngx_strlen( vv->data );
-		vv->valid = 1;
-		vv->no_cacheable = 0;
-		vv->not_found = 0;
-	}
-
-	ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
-				   "http ip2location_region: %V %v", &r->connection->addr_text, v);
 
 	return NGX_OK;
 }
@@ -216,23 +92,8 @@ ngx_http_ip2location_database(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
 	ngx_str_t *value, bin_file;
 	
-	ngx_http_variable_t *country_code_var;
-	ngx_str_t ngx_country_code_var_name = ngx_string("ip2location_country_code");
-
-	ngx_http_variable_t *country_name_var;
-	ngx_str_t ngx_country_name_var_name = ngx_string("ip2location_country_name");
-
-	ngx_http_variable_t *latitude_var;
-	ngx_str_t ngx_latitude_var_name = ngx_string("ip2location_latitude");
-
-	ngx_http_variable_t *longitude_var;
-	ngx_str_t ngx_longitude_var_name = ngx_string("ip2location_longitude");
-
-	ngx_http_variable_t *city_var;
-	ngx_str_t ngx_city_var_name = ngx_string("ip2location_city");
-
-	ngx_http_variable_t *region_var;
-	ngx_str_t ngx_region_var_name = ngx_string("ip2location_region");
+	ngx_http_variable_t *json_var;
+	ngx_str_t ngx_json_var_name = ngx_string("ip2location_json");
 
 	value = cf->args->elts;
 
@@ -245,53 +106,13 @@ ngx_http_ip2location_database(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 	if(IP2LocationObj == NULL)
 		return NGX_CONF_ERROR;
 
-	country_code_var = ngx_http_add_variable(cf, &ngx_country_code_var_name, NGX_HTTP_VAR_CHANGEABLE );
-	if (country_code_var == NULL) {
+	json_var = ngx_http_add_variable(cf, &ngx_json_var_name, NGX_HTTP_VAR_CHANGEABLE );
+	if (json_var == NULL) {
 		return NGX_CONF_ERROR;
 	}
 
-	country_name_var = ngx_http_add_variable(cf, &ngx_country_name_var_name, NGX_HTTP_VAR_CHANGEABLE );
-	if (country_name_var == NULL) {
-		return NGX_CONF_ERROR;
-	}
-
-	latitude_var = ngx_http_add_variable(cf, &ngx_latitude_var_name, NGX_HTTP_VAR_CHANGEABLE );
-	if (latitude_var == NULL) {
-		return NGX_CONF_ERROR;
-	}
-
-	longitude_var = ngx_http_add_variable(cf, &ngx_longitude_var_name, NGX_HTTP_VAR_CHANGEABLE );
-	if (longitude_var == NULL) {
-		return NGX_CONF_ERROR;
-	}
-
-	city_var = ngx_http_add_variable(cf, &ngx_city_var_name, NGX_HTTP_VAR_CHANGEABLE );
-	if (city_var == NULL) {
-		return NGX_CONF_ERROR;
-	}
-
-	region_var = ngx_http_add_variable(cf, &ngx_region_var_name, NGX_HTTP_VAR_CHANGEABLE );
-	if (region_var == NULL) {
-		return NGX_CONF_ERROR;
-	}
-
-	country_code_var->get_handler = ngx_http_ip2location_country_code;
-	country_code_var->data = (uintptr_t)IP2LocationObj;
-
-	country_name_var->get_handler = ngx_http_ip2location_country_name;
-	country_name_var->data = (uintptr_t)IP2LocationObj;
-
-	latitude_var->get_handler = ngx_http_ip2location_latitude;
-	latitude_var->data = (uintptr_t)IP2LocationObj;
-
-	longitude_var->get_handler = ngx_http_ip2location_longitude;
-	longitude_var->data = (uintptr_t)IP2LocationObj;
-
-	city_var->get_handler = ngx_http_ip2location_city;
-	city_var->data = (uintptr_t)IP2LocationObj;
-
-	region_var->get_handler = ngx_http_ip2location_region;
-	region_var->data = (uintptr_t)IP2LocationObj;
+	json_var->get_handler = ngx_http_ip2location_json;
+	json_var->data = (uintptr_t)IP2LocationObj;
 
 	return NGX_CONF_OK;
 }

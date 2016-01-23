@@ -22,16 +22,15 @@ Change your Nginx config file to include the 'ip2location_database' directive:
     ip2location_database /absolute/path/to/IP2LOCATION-LITE-DB1.BIN;
 
 
-The following variables will be made available in Nginx:
+The following variable will be made available in Nginx:
 
-    $ip2location_country_code
-    $ip2location_country_name
+    $ip2location_json
+
+It outputs a json string along this format:
+
+    {"country_long":"Norway","country_short":"NO","city":"Stavanger","region":"Rogaland","lat":58.97005,"long":5.73332}
 
 # Sample BIN Databases
 * Download free IP2Location LITE databases at [http://lite.ip2location.com](http://lite.ip2location.com)  
 * Download IP2Location sample databases at [http://www.ip2location.com/developers](http://www.ip2location.com/developers)
-
-# Support
-Email: support@ip2location.com.  
-URL: [http://www.ip2location.com](http://www.ip2location.com)
 
