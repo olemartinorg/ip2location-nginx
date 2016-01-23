@@ -115,8 +115,8 @@ ngx_http_ip2location_latitude(ngx_http_request_t *r, ngx_http_variable_value_t *
 	
 	IP2LocationRecord *record = IP2Location_get_latitude((IP2Location *)data, (char *)r->connection->addr_text.data);
 	
-	char latitude_record[20];
-	sprintf(latitude_record, "%.9f", record->latitude);
+	char latitude_record[30];
+	snprintf(latitude_record, 30, "%.9f", record->latitude);
 
 	vv->data = (u_char *)latitude_record;
 	
@@ -142,8 +142,8 @@ ngx_http_ip2location_longitude(ngx_http_request_t *r, ngx_http_variable_value_t 
 	
 	IP2LocationRecord *record = IP2Location_get_longitude((IP2Location *)data, (char *)r->connection->addr_text.data);
 	
-	char longitude_record[20];
-	sprintf(longitude_record, "%.9f", record->longitude);
+	char longitude_record[30];
+	snprintf(longitude_record, 30, "%.9f", record->longitude);
 
 	vv->data = (u_char *)longitude_record;
 	
